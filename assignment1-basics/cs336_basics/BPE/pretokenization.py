@@ -2,6 +2,7 @@ import os
 from typing import BinaryIO
 import regex as re
 from multiprocessing import Pool
+from collections import defaultdict
 
 
 def find_chunk_boundaries(
@@ -77,7 +78,7 @@ def worker(
 ) -> dict[tuple[bytes, ...], int]:
     PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
     SPEC_PAT = "|".join(re.escape(special_token) for special_token in special_tokens)
-    frequency_table = {}
+    frequency_table = defaultdict(int)
     with open(input_path, "rb") as f:
         f.seek(start)
         chunk = f.read(end - start).decode("utf-8")
@@ -88,7 +89,7 @@ def worker(
                 token_byte = tuple(
                     bytes([byte_int]) for byte_int in token.group().encode("utf-8")
                 )
-                frequency_table[token_byte] = frequency_table.get(token_byte, 0) + 1
+                frequency_table[token_byte] += 1
     return frequency_table
 
 
@@ -96,7 +97,7 @@ def pretokenize(
     input_path: str | os.PathLike, special_tokens: list[str], num_processes: int
 ) -> dict[tuple[bytes, ...], int]:
 
-    frequency_table = {}
+    frequency_table = defaultdict(int)
     with open(input_path, "rb") as f:
         boundaries = find_chunk_boundaries(
             f,
@@ -107,14 +108,15 @@ def pretokenize(
     for start, end in zip(boundaries[:-1], boundaries[1:]):
         argument_per_worker.append((start, end, input_path, special_tokens))
 
-    with Pool(num_processes) as p:
+    actual_processes = (
+        num_processes if len(boundaries) - 1 > num_processes else len(boundaries) - 1
+    )
+    with Pool(actual_processes) as p:
         results = p.starmap(worker, argument_per_worker)
 
     for local_table in results:
         for token_bytes, frequency in local_table.items():
-            frequency_table[token_bytes] = (
-                frequency_table.get(token_bytes, 0) + frequency
-            )
+            frequency_table[token_bytes] += frequency
 
     return frequency_table
 
