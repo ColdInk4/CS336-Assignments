@@ -3,6 +3,8 @@ from typing import BinaryIO
 import regex as re
 from multiprocessing import Pool
 from collections import defaultdict
+import cProfile
+import pstats
 
 
 def find_chunk_boundaries(
@@ -97,6 +99,10 @@ def pretokenize(
     input_path: str | os.PathLike, special_tokens: list[str], num_processes: int
 ) -> dict[tuple[bytes, ...], int]:
 
+    print("====Start pretokenizing====")
+    profiler = cProfile.Profile()
+    profiler.enable()
+
     frequency_table = defaultdict(int)
     with open(input_path, "rb") as f:
         boundaries = find_chunk_boundaries(
@@ -117,6 +123,10 @@ def pretokenize(
     for local_table in results:
         for token_bytes, frequency in local_table.items():
             frequency_table[token_bytes] += frequency
+
+    profiler.disable()
+    stats = pstats.Stats(profiler)
+    print(stats.sort_stats("cumtime").print_stats(20))
 
     return frequency_table
 

@@ -1,6 +1,29 @@
 from cs336_basics.BPE.pretokenization import pretokenize
 import os
 from collections import defaultdict
+import heapq
+import cProfile
+import pstats
+
+
+class Entry:
+    def __init__(self, count: int, pair: tuple[bytes, bytes]):
+        self.count = count
+        self.pair = pair
+
+    def __repr__(self):
+        return f"({self.count}, {self.pair})"
+
+    def __iter__(self):
+        yield self.count
+        yield self.pair
+
+    def __lt__(self, other):
+        return (
+            self.count > other.count
+            or self.count == other.count
+            and self.pair > other.pair
+        )
 
 
 def init_vocab(vocab_size: int, special_tokens: list[str]) -> dict[int, bytes]:
@@ -18,6 +41,12 @@ def train_bpe(
     vocab_table: dict[int, bytes],
     current_pretoken_freqs: dict[tuple[bytes, ...], int],
 ) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
+
+    print("====Start Training BPE====")
+
+    profiler = cProfile.Profile()
+    profiler.enable()
+
     num_merges: int = vocab_size - len(vocab_table)
     merges: list[tuple[bytes, bytes]] = []
     global_pair_counts: dict[tuple[bytes, bytes], int] = defaultdict(
@@ -26,6 +55,8 @@ def train_bpe(
     pair_to_pretokens: dict[tuple[bytes, bytes], set[tuple[bytes, ...]]] = defaultdict(
         set
     )  # 每个 pair 在哪些 pretoken 内部出现
+
+    pair_counts_heap = []
 
     for pretoken, frequency in current_pretoken_freqs.items():
         for old_idx in range(len(pretoken) - 1):
@@ -36,26 +67,39 @@ def train_bpe(
             global_pair_counts[pair] += frequency
             pair_to_pretokens[pair].add(pretoken)
 
+    for pair, frequency in global_pair_counts.items():
+        heapq.heappush(pair_counts_heap, Entry(frequency, pair))
+
+    pair_to_pretokens_removals = defaultdict(set)
+    pair_to_pretokens_additions = defaultdict(set)
+    pair_count_deltas = defaultdict(int)
+    pretoken_freq_deltas = defaultdict(int)
+    pretokens_to_remove_from_freqs = set()
+
     for _ in range(num_merges):
         if len(global_pair_counts) == 0:
             break
-        max_pair, _ = max(global_pair_counts.items(), key=lambda x: (x[1], x[0]))
+        max_count, max_pair = heapq.heappop(pair_counts_heap)
+
+        while (
+            max_pair not in global_pair_counts
+            or global_pair_counts[max_pair] != max_count
+        ):
+            max_count, max_pair = heapq.heappop(pair_counts_heap)
         merges.append(max_pair)
 
         # 合并后的新词
         merged_token_bytes: bytes = max_pair[0] + max_pair[1]
         vocab_table[len(vocab_table)] = merged_token_bytes
 
-        affected_pretokens = pair_to_pretokens[max_pair]
+        pair_to_pretokens_removals.clear()
+        pair_to_pretokens_additions.clear()
+        pair_count_deltas.clear()
+        pretoken_freq_deltas.clear()
+        pretokens_to_remove_from_freqs.clear()
 
-        pretokens_to_be_removed = defaultdict(set)
-        pretokens_to_be_added = defaultdict(set)
-        global_pair_counts_to_be_changed = defaultdict(int)
-        current_pretoken_freqs_to_be_changed = defaultdict(int)
-        current_pretoken_freqs_to_be_removed = set()
-
-        for pretoken in affected_pretokens:
-            merged_pretoken_parts = []
+        for pretoken in pair_to_pretokens[max_pair]:
+            new_pretoken_parts = []
             old_idx = 0
 
             # 发生改变的index
@@ -65,8 +109,8 @@ def train_bpe(
             while old_idx < len(pretoken) - 1:
                 candidate_pair = (pretoken[old_idx], pretoken[old_idx + 1])
                 if candidate_pair == max_pair:
-                    merged_pretoken_parts.append(merged_token_bytes)
-                    new_pair_index = len(merged_pretoken_parts) - 1
+                    new_pretoken_parts.append(merged_token_bytes)
+                    new_pair_index = len(new_pretoken_parts) - 1
                     # 受影响的项是index左右的
                     # loweweabcwest   index_changed_old
                     #  +^^^^+ +^^+
@@ -88,57 +132,59 @@ def train_bpe(
 
                     old_idx += 2
                 else:
-                    merged_pretoken_parts.append(pretoken[old_idx])
+                    new_pretoken_parts.append(pretoken[old_idx])
                     old_idx += 1
             if old_idx == len(pretoken) - 1:
-                merged_pretoken_parts.append(pretoken[old_idx])
+                new_pretoken_parts.append(pretoken[old_idx])
 
-            merged_pretoken = tuple(merged_pretoken_parts)  # 新的pretoken
+            merged_pretoken = tuple(new_pretoken_parts)  # 新的pretoken
 
             # 进行 pair_from_pretoken 的更新
             for old_index in range(len(pretoken) - 1):
                 pair = (pretoken[old_index], pretoken[old_index + 1])
                 if pretoken in pair_to_pretokens[pair]:
-                    pretokens_to_be_removed[pair].add(pretoken)
+                    pair_to_pretokens_removals[pair].add(pretoken)
 
                 if old_index not in changed_old_pair_starts:
-                    pretokens_to_be_added[pair].add(merged_pretoken)
+                    pair_to_pretokens_additions[pair].add(merged_pretoken)
                 else:
-                    global_pair_counts_to_be_changed[pair] -= current_pretoken_freqs[
-                        pretoken
-                    ]
+                    pair_count_deltas[pair] -= current_pretoken_freqs[pretoken]
 
             for new_index in changed_new_pair_starts:
                 pair = (merged_pretoken[new_index], merged_pretoken[new_index + 1])
-                global_pair_counts_to_be_changed[pair] += current_pretoken_freqs[
-                    pretoken
-                ]
-                pretokens_to_be_added[pair].add(merged_pretoken)
+                pair_count_deltas[pair] += current_pretoken_freqs[pretoken]
+                pair_to_pretokens_additions[pair].add(merged_pretoken)
 
-            current_pretoken_freqs_to_be_changed[
-                merged_pretoken
-            ] += current_pretoken_freqs[pretoken]
-            current_pretoken_freqs_to_be_removed.add(pretoken)
+            pretoken_freq_deltas[merged_pretoken] += current_pretoken_freqs[pretoken]
+            pretokens_to_remove_from_freqs.add(pretoken)
 
-        for pair, pretokens in pretokens_to_be_removed.items():
+        for pair, pretokens in pair_to_pretokens_removals.items():
             for pretoken in pretokens:
                 pair_to_pretokens[pair].remove(pretoken)
 
-        for pair, pretokens in pretokens_to_be_added.items():
+        for pair, pretokens in pair_to_pretokens_additions.items():
             for pretoken in pretokens:
                 pair_to_pretokens[pair].add(pretoken)
 
-        for pair, count in global_pair_counts_to_be_changed.items():
+        for pair, count in pair_count_deltas.items():
             global_pair_counts[pair] += count
             if global_pair_counts[pair] == 0:
                 del global_pair_counts[pair]
                 del pair_to_pretokens[pair]
+            else:
+                heapq.heappush(pair_counts_heap, Entry(global_pair_counts[pair], pair))
 
-        for pretoken, freq in current_pretoken_freqs_to_be_changed.items():
+        for pretoken, freq in pretoken_freq_deltas.items():
             current_pretoken_freqs[pretoken] += freq
 
-        for pretoken in current_pretoken_freqs_to_be_removed:
+        for pretoken in pretokens_to_remove_from_freqs:
             del current_pretoken_freqs[pretoken]
+
+    profiler.disable()
+
+    stats = pstats.Stats(profiler)
+
+    print(stats.sort_stats("cumtime").print_stats(20))
 
     return (vocab_table, merges)
 
@@ -154,3 +200,12 @@ def train_bpe_from_filepath(
         input_path, special_tokens, num_processes
     )
     return train_bpe(vocab_size, vocab_table, frequency_table)
+
+
+if __name__ == "__main__":
+    train_bpe_from_filepath(
+        "/home/jiepengjin/Study/CS336-Assignments/assignment1-basics/data/TinyStoriesV2-GPT4-train.txt",
+        10000,
+        ["<|endoftext|>"],
+        64,
+    )
