@@ -10,6 +10,8 @@ from jaxtyping import Bool, Float, Int
 from torch import Tensor
 
 from cs336_basics.BPE.train_bpe import train_bpe_from_filepath
+from cs336_basics.BPE.tokenizer import Tokenizer
+
 
 def run_linear(
     d_in: int,
@@ -453,7 +455,9 @@ def run_cross_entropy(
     raise NotImplementedError
 
 
-def run_gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: float) -> None:
+def run_gradient_clipping(
+    parameters: Iterable[torch.nn.Parameter], max_l2_norm: float
+) -> None:
     """Given a set of parameters, clip their combined gradients to have l2 norm at most max_l2_norm.
 
     Args:
@@ -560,7 +564,7 @@ def get_tokenizer(
     Returns:
         A BPE tokenizer that uses the provided vocab, merges, and special tokens.
     """
-    raise NotImplementedError
+    return Tokenizer(vocab, merges, special_tokens)
 
 
 def run_train_bpe(
