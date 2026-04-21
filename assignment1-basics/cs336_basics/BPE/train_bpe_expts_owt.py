@@ -1,0 +1,36 @@
+from cs336_basics.BPE.train_bpe import train_bpe_from_filepath
+
+vocab, merges = train_bpe_from_filepath(
+    "data/owt_train.txt",
+    32000,
+    ["<|endoftext|>"],
+    64,
+)
+
+with open("results/owt-vocab.txt", "w") as f:
+    for token_id, token_bytes in vocab.items():
+        f.write(f"{token_id}\t{token_bytes.hex()}\n")
+
+with open("results/readable/owt-vocab-readable.txt", "w") as f:
+    for token_id, token_bytes in vocab.items():
+        f.write(f"{token_id}: {token_bytes}\n")
+
+with open("results/owt-merges.txt", "w") as f:
+    for left_bytes, right_bytes in merges:
+        f.write(f"{left_bytes.hex()}\t{right_bytes.hex()}\n")
+
+with open("results/readable/owt-merges-readable.txt", "w") as f:
+    for left_bytes, right_bytes in merges:
+        f.write(f"({left_bytes}, {right_bytes})\n")
+
+longest_token_bytes = max(vocab.values(), key=len)
+length = len(longest_token_bytes)
+
+print(f"Longest token (bytes representation): {longest_token_bytes}")
+print(f"Length in bytes: {length}")
+
+try:
+    decoded_str = longest_token_bytes.decode("utf-8")
+    print(f"Decoded string: '{decoded_str}'")
+except UnicodeDecodeError:
+    print("Cannot decode as UTF-8 (this is normal for some intermediate BPE bytes)")
