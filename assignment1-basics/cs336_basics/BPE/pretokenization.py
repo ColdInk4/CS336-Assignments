@@ -6,6 +6,9 @@ from collections import defaultdict
 import cProfile
 import pstats
 
+WORKING_PROFILE = 0
+PRETOKENIZE_PROFILE = 1
+
 
 def find_chunk_boundaries(
     file: BinaryIO,
@@ -77,10 +80,16 @@ def find_chunk_boundaries(
 
 def worker(
     start: int, end: int, input_path: str | os.PathLike, special_tokens: list[str]
-) -> dict[tuple[bytes, ...], int]:
+) -> dict[bytes, int]:
+
+    if WORKING_PROFILE:
+        print("====Start working====")
+        profiler = cProfile.Profile()
+        profiler.enable()
+
     PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
     SPEC_PAT = "|".join(re.escape(special_token) for special_token in special_tokens)
-    frequency_table = defaultdict(int)
+    raw_pretoken_freqs = defaultdict(int)
     with open(input_path, "rb") as f:
         f.seek(start)
         chunk = f.read(end - start).decode("utf-8")
@@ -88,22 +97,28 @@ def worker(
         passages = re.split(SPEC_PAT, chunk) if SPEC_PAT else [chunk]
         for passage in passages:
             for token in re.finditer(PAT, passage):
-                token_byte = tuple(
-                    bytes([byte_int]) for byte_int in token.group().encode("utf-8")
-                )
-                frequency_table[token_byte] += 1
-    return frequency_table
+                token_byte = token.group().encode("utf-8")
+                raw_pretoken_freqs[token_byte] += 1
+
+    if WORKING_PROFILE:
+        profiler.disable()
+        stats = pstats.Stats(profiler)
+        print(stats.sort_stats("cumtime").print_stats(20))
+    return raw_pretoken_freqs
 
 
 def pretokenize(
     input_path: str | os.PathLike, special_tokens: list[str], num_processes: int
 ) -> dict[tuple[bytes, ...], int]:
 
-    print("====Start pretokenizing====")
-    profiler = cProfile.Profile()
-    profiler.enable()
+    if PRETOKENIZE_PROFILE:
+        print("====Start pretokenizing====")
+        profiler = cProfile.Profile()
+        profiler.enable()
 
-    frequency_table = defaultdict(int)
+    global_raw_pretoken_freqs: dict[bytes, int] = defaultdict(int)
+    initial_pretoken_symbol_freqs: dict[tuple[bytes, ...], int] = defaultdict(int)
+
     with open(input_path, "rb") as f:
         boundaries = find_chunk_boundaries(
             f,
@@ -122,15 +137,24 @@ def pretokenize(
 
     for local_table in results:
         for token_bytes, frequency in local_table.items():
-            frequency_table[token_bytes] += frequency
+            global_raw_pretoken_freqs[token_bytes] += frequency
 
-    profiler.disable()
-    stats = pstats.Stats(profiler)
-    print(stats.sort_stats("cumtime").print_stats(20))
+    for token_bytes, frequency in global_raw_pretoken_freqs.items():
+        initial_symbol_seq = tuple(bytes([byte_int]) for byte_int in token_bytes)
+        initial_pretoken_symbol_freqs[initial_symbol_seq] = frequency
 
-    return frequency_table
+    if PRETOKENIZE_PROFILE:
+        profiler.disable()
+        stats = pstats.Stats(profiler)
+        print(stats.sort_stats("cumtime").print_stats(20))
+
+    return initial_pretoken_symbol_freqs
 
 
 ## Usage
 if __name__ == "__main__":
-    print(pretokenize("data/test.txt", ["<|endoftext|>"], 64))
+    pretokenize(
+        "data/TinyStoriesV2-GPT4-train.txt",
+        ["<|endoftext|>"],
+        64,
+    )

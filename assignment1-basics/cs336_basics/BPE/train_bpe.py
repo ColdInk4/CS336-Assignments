@@ -5,6 +5,8 @@ import heapq
 import cProfile
 import pstats
 
+BPE_PROFILE = 0
+
 
 class Entry:
     def __init__(self, count: int, pair: tuple[bytes, bytes]):
@@ -42,10 +44,10 @@ def train_bpe(
     current_pretoken_freqs: dict[tuple[bytes, ...], int],
 ) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
 
-    print("====Start Training BPE====")
-
-    profiler = cProfile.Profile()
-    profiler.enable()
+    if BPE_PROFILE:
+        print("====Start Training BPE====")
+        profiler = cProfile.Profile()
+        profiler.enable()
 
     num_merges: int = vocab_size - len(vocab_table)
     merges: list[tuple[bytes, bytes]] = []
@@ -180,11 +182,10 @@ def train_bpe(
         for pretoken in pretokens_to_remove_from_freqs:
             del current_pretoken_freqs[pretoken]
 
-    profiler.disable()
-
-    stats = pstats.Stats(profiler)
-
-    print(stats.sort_stats("cumtime").print_stats(20))
+    if BPE_PROFILE:
+        profiler.disable()
+        stats = pstats.Stats(profiler)
+        print(stats.sort_stats("cumtime").print_stats(20))
 
     return (vocab_table, merges)
 
@@ -204,7 +205,7 @@ def train_bpe_from_filepath(
 
 if __name__ == "__main__":
     train_bpe_from_filepath(
-        "/home/jiepengjin/Study/CS336-Assignments/assignment1-basics/data/TinyStoriesV2-GPT4-train.txt",
+        "data/TinyStoriesV2-GPT4-train.txt",
         10000,
         ["<|endoftext|>"],
         64,
