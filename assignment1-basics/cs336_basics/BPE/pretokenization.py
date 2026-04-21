@@ -7,7 +7,7 @@ import cProfile
 import pstats
 
 WORKING_PROFILE = 0
-PRETOKENIZE_PROFILE = 1
+PRETOKENIZE_PROFILE = 0
 
 
 def find_chunk_boundaries(
