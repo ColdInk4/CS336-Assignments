@@ -16,106 +16,105 @@ def init_vocab(vocab_size: int, special_tokens: list[str]) -> dict[int, bytes]:
 def train_bpe(
     vocab_size: int,
     vocab_table: dict[int, bytes],
-    frequency_table: dict[tuple[bytes, ...], int],
+    current_pretoken_freqs: dict[tuple[bytes, ...], int],
 ) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
-    merge_round: int = vocab_size - len(vocab_table)
+    num_merges: int = vocab_size - len(vocab_table)
     merges: list[tuple[bytes, bytes]] = []
-    pair_count: dict[tuple[bytes, bytes], int] = defaultdict(
+    global_pair_counts: dict[tuple[bytes, bytes], int] = defaultdict(
         int
     )  # 每个 pair 的全局频次
-    pair_from_pre_token: dict[tuple[bytes, bytes], set[tuple[bytes, ...]]] = (
-        defaultdict(set)
+    pair_to_pretokens: dict[tuple[bytes, bytes], set[tuple[bytes, ...]]] = defaultdict(
+        set
     )  # 每个 pair 在哪些 pre_token 内部出现
 
-    for pre_token, frequency in frequency_table.items():
-        for pair_index in range(len(pre_token) - 1):
+    for pre_token, frequency in current_pretoken_freqs.items():
+        for old_idx in range(len(pre_token) - 1):
             pair: tuple[bytes, bytes] = (
-                pre_token[pair_index],
-                pre_token[pair_index + 1],
+                pre_token[old_idx],
+                pre_token[old_idx + 1],
             )
-            pair_count[pair] += frequency
-            pair_from_pre_token[pair].add(pre_token)
+            global_pair_counts[pair] += frequency
+            pair_to_pretokens[pair].add(pre_token)
 
-    for _ in range(merge_round):
+    for _ in range(num_merges):
         # 目前最大频次对应的 pair
         # print("frequency_table: ", frequency_table)
         # print(pair_count)
         # print(pair_from_pre_token)
-        if len(pair_count) == 0:
+        if len(global_pair_counts) == 0:
             break
-        max_pair, _ = max(pair_count.items(), key=lambda x: (x[1], x[0]))
+        max_pair, _ = max(global_pair_counts.items(), key=lambda x: (x[1], x[0]))
         merges.append(max_pair)
 
         # 合并后的新词
-        new_vocab: bytes = max_pair[0] + max_pair[1]
-        vocab_table[len(vocab_table)] = new_vocab
+        merged_token_bytes: bytes = max_pair[0] + max_pair[1]
+        vocab_table[len(vocab_table)] = merged_token_bytes
 
         # 目前最大频次对应的 pair 转换为list
-        max_pair_list = list(max_pair)
-        max_pair_from_pre_token = pair_from_pre_token[max_pair]
-        for pre_token in max_pair_from_pre_token:
-            new_pre_token_list = []
-            pair_index = 0
+        tokens_with_max_pair = pair_to_pretokens[max_pair]
+        for pre_token in tokens_with_max_pair:
+            merged_pretoken_parts = []
+            old_idx = 0
 
             # 发生改变的index
-            index_changed_old = set()  # 从这个index开始的pair，要进行减
-            index_changed_new = set()  # 从这个index开始的pair，要进行加
+            changed_old_pair_starts = set()  # 从这个index开始的pair，要进行减
+            changed_new_pair_starts = set()  # 从这个index开始的pair，要进行加
 
-            while pair_index < len(pre_token) - 1:
-                pair_list = [pre_token[pair_index], pre_token[pair_index + 1]]
+            while old_idx < len(pre_token) - 1:
+                pair_list = (pre_token[old_idx], pre_token[old_idx + 1])
                 # print(pair_list)
-                if pair_list == max_pair_list:
-                    new_pre_token_list.append(new_vocab)
-                    new_pair_index = len(new_pre_token_list) - 1
+                if pair_list == max_pair:
+                    merged_pretoken_parts.append(merged_token_bytes)
+                    new_pair_index = len(merged_pretoken_parts) - 1
                     # 受影响的项是index左右的
                     # loweweabcwest   index_changed_old
                     #  +^^^^+ +^^+
                     # loAAabcAst   index_changed_new
                     #  +^^+ +^+
-                    if pair_index != 0:
-                        index_changed_old.add(
-                            pair_index - 1,
+                    if old_idx != 0:
+                        changed_old_pair_starts.add(
+                            old_idx - 1,
                         )
-                        index_changed_new.add(new_pair_index - 1)
-                    index_changed_old.add(
-                        pair_index,
+                        changed_new_pair_starts.add(new_pair_index - 1)
+                    changed_old_pair_starts.add(
+                        old_idx,
                     )
-                    if pair_index != len(pre_token) - 2:
-                        index_changed_old.add(
-                            pair_index + 1,
+                    if old_idx != len(pre_token) - 2:
+                        changed_old_pair_starts.add(
+                            old_idx + 1,
                         )
-                        index_changed_new.add(new_pair_index)
+                        changed_new_pair_starts.add(new_pair_index)
 
-                    pair_index += 2
+                    old_idx += 2
                 else:
-                    new_pre_token_list.append(pre_token[pair_index])
-                    pair_index += 1
-            if pair_index == len(pre_token) - 1:
-                new_pre_token_list.append(pre_token[pair_index])
+                    merged_pretoken_parts.append(pre_token[old_idx])
+                    old_idx += 1
+            if old_idx == len(pre_token) - 1:
+                merged_pretoken_parts.append(pre_token[old_idx])
 
-            new_pre_token = tuple(new_pre_token_list)  # 新的pre_token
+            merged_pretoken = tuple(merged_pretoken_parts)  # 新的pre_token
 
             # 进行 pair_from_pre_token 的更新
             for old_index in range(len(pre_token) - 1):
                 pair = (pre_token[old_index], pre_token[old_index + 1])
-                if pair != max_pair and pre_token in pair_from_pre_token[pair]:
-                    pair_from_pre_token[pair].remove(pre_token)
+                if pair != max_pair and pre_token in pair_to_pretokens[pair]:
+                    pair_to_pretokens[pair].remove(pre_token)
 
-                if old_index not in index_changed_old:
-                    pair_from_pre_token[pair].add(new_pre_token)
+                if old_index not in changed_old_pair_starts:
+                    pair_to_pretokens[pair].add(merged_pretoken)
                 else:
-                    pair_count[pair] -= frequency_table[pre_token]
-                    if pair_count[pair] == 0:
-                        del pair_count[pair]
-                        del pair_from_pre_token[pair]
+                    global_pair_counts[pair] -= current_pretoken_freqs[pre_token]
+                    if global_pair_counts[pair] == 0:
+                        del global_pair_counts[pair]
+                        del pair_to_pretokens[pair]
 
-            for new_index in index_changed_new:
-                pair = (new_pre_token[new_index], new_pre_token[new_index + 1])
-                pair_count[pair] += frequency_table[pre_token]
-                pair_from_pre_token[pair].add(new_pre_token)
+            for new_index in changed_new_pair_starts:
+                pair = (merged_pretoken[new_index], merged_pretoken[new_index + 1])
+                global_pair_counts[pair] += current_pretoken_freqs[pre_token]
+                pair_to_pretokens[pair].add(merged_pretoken)
 
-            frequency_table[new_pre_token] += frequency_table[pre_token]
-            del frequency_table[pre_token]
+            current_pretoken_freqs[merged_pretoken] += current_pretoken_freqs[pre_token]
+            del current_pretoken_freqs[pre_token]
 
         # print(pair_count)
         # print(pair_from_pre_token)
