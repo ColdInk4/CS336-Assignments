@@ -1,6 +1,10 @@
 import regex as re
 from collections.abc import Iterable, Iterator
-from tests.common import gpt2_bytes_to_unicode
+import cProfile
+import pstats
+
+DECODING_PROFILE = 0
+ENCODING_PROFILE = 0
 
 
 class Tokenizer:
@@ -14,7 +18,9 @@ class Tokenizer:
 
         self.vocab: dict[int, bytes] = vocab
         self.merges: list[tuple[bytes, bytes]] = merges
-        self.special_tokens: list[str] | None = special_tokens
+        self.special_tokens: list[str] | None = (
+            sorted(special_tokens, key=lambda x: -len(x)) if special_tokens else None
+        )
         self.special_tokens_len_max = (
             len(max(self.special_tokens, key=len)) if self.special_tokens else 0
         )
@@ -34,17 +40,14 @@ class Tokenizer:
                     idx = len(self.vocab)
                     self.vocab[idx] = special_token_bytes
                     self.bytes_to_id[special_token_bytes] = idx
-            (
-                self.special_tokens.sort(key=lambda x: -len(x))
-                if self.special_tokens
-                else None
-            )
 
         self.special_token_pattern: str | None = (
             "|".join(re.escape(special_token) for special_token in self.special_tokens)
             if self.special_tokens
             else None
         )
+
+        self.pretoken_to_token_ids: dict[str, list[int]] = {}
 
     @classmethod
     def from_files(
@@ -72,9 +75,14 @@ class Tokenizer:
 
     def encode(self, text: str) -> list[int]:
 
+        if ENCODING_PROFILE:
+            print("====Start encoding====")
+            profiler = cProfile.Profile()
+            profiler.enable()
+
         results = []
         ### 按照SPEC_PAT划分
-        text_segments = (
+        segments = (
             re.split(self.special_token_pattern, text)
             if self.special_token_pattern
             else [text]
@@ -85,9 +93,8 @@ class Tokenizer:
             else None
         )
 
-        for passage in text_segments:
-            for pretoken_match in re.finditer(self.pretoken_pattern, passage):
-                results += self.encode_pretoken(pretoken_match.group())
+        for segment_text in segments:
+            results += self.encode_segment_text(segment_text)
 
             match = next(special_token_matches, None) if special_token_matches else None
             if match:
@@ -95,12 +102,116 @@ class Tokenizer:
                 cur_spec_token_id = self.bytes_to_id[cur_spec_token_bytes]
                 results.append(cur_spec_token_id)
 
+        if ENCODING_PROFILE:
+            profiler.disable()
+            stats = pstats.Stats(profiler)
+            stats.sort_stats("cumtime").print_stats(20)
+
         return results
 
+    def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
+
+        pending_text = ""
+
+        for chunk in iterable:
+            cur_chunk = pending_text + chunk
+            segments = (
+                re.split(self.special_token_pattern, cur_chunk)
+                if self.special_token_pattern
+                else [cur_chunk]
+            )
+            special_matches = (
+                re.finditer(self.special_token_pattern, cur_chunk)
+                if self.special_token_pattern
+                else None
+            )
+            for segment_idx, segment_text in enumerate(segments):
+                # 只有 i 是最后一个passage的时候才会走到边界
+                if segment_idx != len(segments) - 1:
+                    for token_id in self.encode_segment_text(segment_text):
+                        yield token_id
+                    match = next(special_matches, None) if special_matches else None
+                    if match:
+                        cur_spec_token_bytes = match.group().encode("utf8")
+                        yield self.bytes_to_id[cur_spec_token_bytes]
+                else:
+                    pending_suffix_len = 0
+                    if self.special_tokens:
+                        for suffix_len in range(1, self.special_tokens_len_max):
+                            might_be_special_token = segment_text[-suffix_len:]
+                            for special_token in [
+                                special_token_len_valid
+                                for special_token_len_valid in self.special_tokens
+                                if len(special_token_len_valid) > suffix_len
+                            ]:
+                                if special_token[:suffix_len] == might_be_special_token:
+                                    pending_suffix_len = suffix_len
+                    segment_text_without_special_suffix = (
+                        segment_text[:-pending_suffix_len]
+                        if pending_suffix_len
+                        else segment_text
+                    )
+                    pending_pretoken: str = ""
+                    for pretoken_match in re.finditer(
+                        self.pretoken_pattern, segment_text_without_special_suffix
+                    ):
+                        if pending_pretoken:
+                            for token_id in self.encode_pretoken(pending_pretoken):
+                                yield token_id
+                        pending_pretoken = pretoken_match.group()
+                    pending_suffix_len += len(pending_pretoken)
+                    pending_text = (
+                        segment_text[-pending_suffix_len:] if pending_suffix_len else ""
+                    )
+
+        # 对buffer处理
+
+        segments = (
+            re.split(self.special_token_pattern, pending_text)
+            if self.special_token_pattern
+            else [pending_text]
+        )
+        special_matches = (
+            re.finditer(self.special_token_pattern, pending_text)
+            if self.special_token_pattern
+            else None
+        )
+
+        for segment_text in segments:
+            for token_id in self.encode_segment_text(segment_text):
+                yield token_id
+            match = next(special_matches, None) if special_matches else None
+            if match:
+                cur_spec_token_bytes = match.group().encode("utf8")
+                yield self.bytes_to_id[cur_spec_token_bytes]
+
+    def decode(self, ids: list[int]) -> str:
+        if DECODING_PROFILE:
+            print("====Start decoding====")
+            profiler = cProfile.Profile()
+            profiler.enable()
+
+        result_bytes: bytes = bytes()
+        for token_id in ids:
+            result_bytes += self.vocab[token_id]
+        result = result_bytes.decode("utf8", errors="replace")
+
+        if DECODING_PROFILE:
+            profiler.disable()
+            stats = pstats.Stats(profiler)
+            stats.sort_stats("cumtime").print_stats(20)
+
+        return result
+
     def encode_pretoken(self, pretoken: str) -> list[int]:
+        if pretoken in self.pretoken_to_token_ids:
+            return self.pretoken_to_token_ids[pretoken]
+
         pretoken_bytes = pretoken.encode("utf8")
         if len(pretoken_bytes) == 1:
-            return [self.bytes_to_id[pretoken_bytes]]
+            token_id = [self.bytes_to_id[pretoken_bytes]]
+            self.pretoken_to_token_ids[pretoken] = token_id
+            return token_id
         results = []
         symbols: list[bytes] = [bytes([per_byte]) for per_byte in pretoken_bytes]
 
@@ -133,90 +244,12 @@ class Tokenizer:
         for symbol_bytes in symbols:
             results.append(self.bytes_to_id[symbol_bytes])
 
+        self.pretoken_to_token_ids[pretoken] = results
+
         return results
 
-    def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
-        pending_text = ""
-
-        for chunk in iterable:
-            cur_chunk = pending_text + chunk
-            segments = (
-                re.split(self.special_token_pattern, cur_chunk)
-                if self.special_token_pattern
-                else [cur_chunk]
-            )
-            special_matches = (
-                re.finditer(self.special_token_pattern, cur_chunk)
-                if self.special_token_pattern
-                else None
-            )
-            for segment_idx, segment_text in enumerate(segments):
-                # 只有 i 是最后一个passage的时候才会走到边界
-                if segment_idx != len(segments) - 1:
-                    for pretoken_match in re.finditer(
-                        self.pretoken_pattern, segment_text
-                    ):
-                        for token_id in self.encode_pretoken(pretoken_match.group()):
-                            yield token_id
-                    match = next(special_matches, None) if special_matches else None
-                    if match:
-                        cur_spec_token_bytes = match.group().encode("utf8")
-                        yield self.bytes_to_id[cur_spec_token_bytes]
-                else:
-                    pending_suffix_len = 0
-                    if self.special_tokens:
-                        for suffix_len in range(1, self.special_tokens_len_max):
-                            might_be_special_token = segment_text[-suffix_len:]
-                            for special_token in [
-                                special_token_len_valid
-                                for special_token_len_valid in self.special_tokens
-                                if len(special_token_len_valid) > suffix_len
-                            ]:
-                                if special_token[:suffix_len] == might_be_special_token:
-                                    pending_suffix_len = suffix_len
-                    passage_without_special_suffix = (
-                        segment_text[:-pending_suffix_len]
-                        if pending_suffix_len
-                        else segment_text
-                    )
-                    pending_pretoken: str = ""
-                    for pretoken_match in re.finditer(
-                        self.pretoken_pattern, passage_without_special_suffix
-                    ):
-                        if pending_pretoken:
-                            for token_id in self.encode_pretoken(pending_pretoken):
-                                yield token_id
-                        pending_pretoken = pretoken_match.group()
-                    pending_suffix_len += len(pending_pretoken)
-                    pending_text = (
-                        segment_text[-pending_suffix_len:] if pending_suffix_len else ""
-                    )
-
-        # 对buffer处理
-
-        segments = (
-            re.split(self.special_token_pattern, pending_text)
-            if self.special_token_pattern
-            else [pending_text]
-        )
-        special_matches = (
-            re.finditer(self.special_token_pattern, pending_text)
-            if self.special_token_pattern
-            else None
-        )
-
-        for segment_text in segments:
-            for pretoken_match in re.finditer(self.pretoken_pattern, segment_text):
-                for token_id in self.encode_pretoken(pretoken_match.group()):
-                    yield token_id
-            match = next(special_matches, None) if special_matches else None
-            if match:
-                cur_spec_token_bytes = match.group().encode("utf8")
-                yield self.bytes_to_id[cur_spec_token_bytes]
-
-    def decode(self, ids: list[int]) -> str:
-        result_bytes: bytes = bytes()
-        for id in ids:
-            result_bytes += self.vocab[id]
-        result = result_bytes.decode("utf8", errors="replace")
-        return result
+    def encode_segment_text(self, segment_text: str) -> list[int]:
+        results = []
+        for pretoken_match in re.finditer(self.pretoken_pattern, segment_text):
+            results += self.encode_pretoken(pretoken_match.group())
+        return results
