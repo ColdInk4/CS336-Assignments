@@ -136,10 +136,10 @@ class Tokenizer:
         return results
 
     def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
-        buffer = ""
+        pending_text = ""
 
         for chunk in iterable:
-            cur_chunk = buffer + chunk
+            cur_chunk = pending_text + chunk
             segments = (
                 re.split(self.special_token_pattern, cur_chunk)
                 if self.special_token_pattern
@@ -150,12 +150,14 @@ class Tokenizer:
                 if self.special_token_pattern
                 else None
             )
-            for segment_idx, passage in enumerate(segments):
+            for segment_idx, segment_text in enumerate(segments):
                 # 只有 i 是最后一个passage的时候才会走到边界
                 if segment_idx != len(segments) - 1:
-                    for pretoken_match in re.finditer(self.pretoken_pattern, passage):
-                        for id in self.encode_pretoken(pretoken_match.group()):
-                            yield id
+                    for pretoken_match in re.finditer(
+                        self.pretoken_pattern, segment_text
+                    ):
+                        for token_id in self.encode_pretoken(pretoken_match.group()):
+                            yield token_id
                     match = next(special_matches, None) if special_matches else None
                     if match:
                         cur_spec_token_bytes = match.group().encode("utf8")
@@ -163,49 +165,50 @@ class Tokenizer:
                 else:
                     pending_suffix_len = 0
                     if self.special_tokens:
-                        for segment_idx in range(1, self.special_tokens_len_max):
-                            might_be_special_token = passage[-segment_idx:]
+                        for suffix_len in range(1, self.special_tokens_len_max):
+                            might_be_special_token = segment_text[-suffix_len:]
                             for special_token in [
                                 special_token_len_valid
                                 for special_token_len_valid in self.special_tokens
-                                if len(special_token_len_valid) > segment_idx
+                                if len(special_token_len_valid) > suffix_len
                             ]:
-                                if (
-                                    special_token[:segment_idx]
-                                    == might_be_special_token
-                                ):
-                                    pending_suffix_len = segment_idx
+                                if special_token[:suffix_len] == might_be_special_token:
+                                    pending_suffix_len = suffix_len
                     passage_without_special_suffix = (
-                        passage[:-pending_suffix_len] if pending_suffix_len else passage
+                        segment_text[:-pending_suffix_len]
+                        if pending_suffix_len
+                        else segment_text
                     )
                     pending_pretoken: str = ""
                     for pretoken_match in re.finditer(
                         self.pretoken_pattern, passage_without_special_suffix
                     ):
                         if pending_pretoken:
-                            for id in self.encode(pending_pretoken):
-                                yield id
+                            for token_id in self.encode_pretoken(pending_pretoken):
+                                yield token_id
                         pending_pretoken = pretoken_match.group()
                     pending_suffix_len += len(pending_pretoken)
-                    buffer = passage[-pending_suffix_len:] if pending_suffix_len else ""
+                    pending_text = (
+                        segment_text[-pending_suffix_len:] if pending_suffix_len else ""
+                    )
 
         # 对buffer处理
 
         segments = (
-            re.split(self.special_token_pattern, buffer)
+            re.split(self.special_token_pattern, pending_text)
             if self.special_token_pattern
-            else [buffer]
+            else [pending_text]
         )
         special_matches = (
-            re.finditer(self.special_token_pattern, buffer)
+            re.finditer(self.special_token_pattern, pending_text)
             if self.special_token_pattern
             else None
         )
 
-        for passage in segments:
-            for pretoken_match in re.finditer(self.pretoken_pattern, passage):
-                for id in self.encode(pretoken_match.group()):
-                    yield id
+        for segment_text in segments:
+            for pretoken_match in re.finditer(self.pretoken_pattern, segment_text):
+                for token_id in self.encode_pretoken(pretoken_match.group()):
+                    yield token_id
             match = next(special_matches, None) if special_matches else None
             if match:
                 cur_spec_token_bytes = match.group().encode("utf8")
