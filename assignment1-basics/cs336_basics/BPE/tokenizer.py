@@ -29,7 +29,7 @@ class Tokenizer:
 
         if self.special_tokens:
             for special_token in self.special_tokens:
-                special_token_bytes = special_token.encode("utf8")
+                special_token_bytes = special_token.encode("utf-8")
                 if special_token_bytes not in self.bytes_to_id:
                     idx = len(self.vocab)
                     self.vocab[idx] = special_token_bytes
@@ -133,7 +133,7 @@ class Tokenizer:
         result_bytes: bytes = bytes()
         for token_id in ids:
             result_bytes += self.vocab[token_id]
-        result = result_bytes.decode("utf8", errors="replace")
+        result = result_bytes.decode("utf-8", errors="replace")
 
         return result
 
@@ -141,7 +141,7 @@ class Tokenizer:
         if pretoken in self.pretoken_to_token_ids:
             return self.pretoken_to_token_ids[pretoken]
 
-        pretoken_bytes = pretoken.encode("utf8")
+        pretoken_bytes = pretoken.encode("utf-8")
         if len(pretoken_bytes) == 1:
             token_id = [self.bytes_to_id[pretoken_bytes]]
             self.pretoken_to_token_ids[pretoken] = token_id
@@ -209,7 +209,7 @@ class Tokenizer:
                 next(special_token_matches, None) if special_token_matches else None
             )
             if special_match:
-                cur_spec_token_bytes = special_match.group().encode("utf8")
+                cur_spec_token_bytes = special_match.group().encode("utf-8")
                 cur_spec_token_id = self.bytes_to_id[cur_spec_token_bytes]
                 results.append(cur_spec_token_id)
         return results

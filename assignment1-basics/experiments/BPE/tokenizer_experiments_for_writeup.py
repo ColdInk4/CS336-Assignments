@@ -26,7 +26,7 @@ with open(TinyStories_Valid_Filepath, "r") as f:
     total_token_ids_byTinyStoriesTokenizer = 0
     total_token_ids_byOWTTokenizer = 0
     for document in sample_documents:
-        total_bytes += len(document.encode("utf8"))
+        total_bytes += len(document.encode("utf-8"))
         total_token_ids_byTinyStoriesTokenizer += len(
             TinyStories_Tokenizer.encode(document)
         )
@@ -38,7 +38,7 @@ with open(TinyStories_Valid_Filepath, "r") as f:
         f"OWT Tokenizer on TinyStories's compression ratio is {total_bytes/total_token_ids_byOWTTokenizer}"
     )
 
-    total_file_bytes = len(content.encode("utf8"))
+    total_file_bytes = len(content.encode("utf-8"))
     start_time = time.perf_counter()
     TinyStories_Tokenizer.encode(content)
     end_time = time.perf_counter()
@@ -60,7 +60,7 @@ with open(OWT_Valid_Filepath, "r") as f:
     total_token_ids_byTinyStoriesTokenizer = 0
     total_token_ids_byOWTTokenizer = 0
     for document in sample_documents:
-        total_bytes += len(document.encode("utf8"))
+        total_bytes += len(document.encode("utf-8"))
         total_token_ids_byTinyStoriesTokenizer += len(
             TinyStories_Tokenizer.encode(document)
         )
@@ -73,7 +73,7 @@ with open(OWT_Valid_Filepath, "r") as f:
         f"OWT Tokenizer on OWT's compression ratio is {total_bytes/total_token_ids_byOWTTokenizer}"
     )
 
-    total_file_bytes = len(content.encode("utf8"))
+    total_file_bytes = len(content.encode("utf-8"))
     start_time = time.perf_counter()
     OWT_Tokenizer.encode(content)
     end_time = time.perf_counter()
