@@ -1,7 +1,7 @@
 import torch
 from torch import nn, Tensor
 from jaxtyping import Float
-from cs336_basics.Transformer.linear import Linear
+from cs336_basics.Transformer import Linear
 
 
 def SiLU(x: Float[Tensor, "..."]) -> Float[Tensor, "..."]:
