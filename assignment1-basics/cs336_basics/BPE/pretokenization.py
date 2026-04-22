@@ -103,7 +103,7 @@ def worker(
     if WORKING_PROFILE:
         profiler.disable()
         stats = pstats.Stats(profiler)
-        print(stats.sort_stats("cumtime").print_stats(20))
+        stats.sort_stats("cumtime").print_stats(20)
     return raw_pretoken_freqs
 
 
@@ -146,7 +146,7 @@ def pretokenize(
     if PRETOKENIZE_PROFILE:
         profiler.disable()
         stats = pstats.Stats(profiler)
-        print(stats.sort_stats("cumtime").print_stats(20))
+        stats.sort_stats("cumtime").print_stats(20)
 
     return initial_pretoken_symbol_freqs
 

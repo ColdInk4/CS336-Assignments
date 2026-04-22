@@ -185,7 +185,7 @@ def train_bpe(
     if BPE_PROFILE:
         profiler.disable()
         stats = pstats.Stats(profiler)
-        print(stats.sort_stats("cumtime").print_stats(20))
+        stats.sort_stats("cumtime").print_stats(20)
 
     return (vocab_table, merges)
 
