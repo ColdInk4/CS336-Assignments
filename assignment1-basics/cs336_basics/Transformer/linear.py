@@ -32,5 +32,5 @@ class Linear(nn.Module):
             b=3 * init_std,
         )
 
-    def forward(self, x: Float[Tensor, " ... d_in"]) -> torch.Tensor:
-        return einsum(x, self.weight, "... d_in,d_out d_in ->... d_out")
+    def forward(self, x: Float[Tensor, " ... d_in"]) -> Float[Tensor, " ... d_out"]:
+        return einsum(x, self.weight, "... d_in, d_out d_in ->... d_out")
