@@ -1,4 +1,4 @@
-# FLOPs by matmul per sequence across all heads: 8 * d_model * d_model * sequence_length + 4 * sequence_length^2 * d_model
+# FLOPs by matmul per sequence across all heads: 8 * d_model * d_model * sequence_length + 4 * sequence_length**2 * d_model
 # trainable parameters: 4 * d_model * d_model
 
 import torch
@@ -62,7 +62,7 @@ class Multihead_Self_Attention(nn.Module):
                 sequence_length, sequence_length, device=Q.device, dtype=torch.bool
             )
         )
-        # FLOPs by matmul: 2 * sequence_length^2 * (d_k+d_v) =4 * sequence_length^2 * d_model
+        # FLOPs by matmul: 2 * sequence_length**2 * (d_k+d_v) =4 * sequence_length**2 * d_model
         if self.rope is not None:
             token_positions = torch.arange(
                 sequence_length, device=Q.device, dtype=torch.long

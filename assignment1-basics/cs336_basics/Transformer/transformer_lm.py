@@ -1,6 +1,6 @@
 # FLOPs by matmul per sequence:
 # num_layers
-# * (8 * d_model * d_model * sequence_length + 4 * sequence_length^2 * d_model + 6 * d_model * d_ff * sequence_length)
+# * (8 * d_model * d_model * sequence_length + 4 * sequence_length**2 * d_model + 6 * d_model * d_ff * sequence_length)
 # + 2 * d_model * vocab_size * sequence_length
 
 # trainable parameters:
@@ -73,7 +73,7 @@ class Transformer_LM(nn.Module):
             embedding_values
         )
 
-        # FLOPs by matmul per sequence: num_layers * (8 * d_model * d_model * sequence_length + 4 * sequence_length^2 * d_model + 6 * d_model * d_ff * sequence_length)
+        # FLOPs by matmul per sequence: num_layers * (8 * d_model * d_model * sequence_length + 4 * sequence_length**2 * d_model + 6 * d_model * d_ff * sequence_length)
         for transformer_block in self.layers:
             transformer_values = transformer_block(transformer_values)
 
