@@ -5,6 +5,7 @@ from .swiglu import SwiGLU, SiLU
 from .rope import RoPE
 from .softmax import softmax
 from .scaled_dot_product_attention import scaled_dot_product_attention
+from .multihead_self_attention import Multihead_Self_Attention
 
 __all__ = [
     "Linear",
@@ -15,4 +16,5 @@ __all__ = [
     "RoPE",
     "softmax",
     "scaled_dot_product_attention",
+    "Multihead_Self_Attention",
 ]
