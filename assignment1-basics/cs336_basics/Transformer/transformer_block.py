@@ -1,6 +1,5 @@
 import torch
 from torch import nn, Tensor
-from einops import rearrange
 from jaxtyping import Float
 from cs336_basics.Transformer import Multihead_Self_Attention, RMSNorm, SwiGLU
 
