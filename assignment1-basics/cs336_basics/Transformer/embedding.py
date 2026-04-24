@@ -1,4 +1,5 @@
 # FLOPs by matmul: 0
+# trainable parameters: vocab_size * d_model
 
 import torch
 from torch import nn, Tensor

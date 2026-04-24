@@ -1,4 +1,5 @@
 # FLOPs by matmul: 0
+# trainable parameters: d_model
 
 import torch
 from torch import nn, Tensor
@@ -16,6 +17,7 @@ class RMSNorm(nn.Module):
         super().__init__()
         self.d_model = d_model
         self.eps = eps
+        # trainable parameters: d_model
         self.weight: Float[Tensor, "d_model"] = nn.Parameter(
             torch.ones(self.d_model, device=device, dtype=dtype)
         )

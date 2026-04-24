@@ -1,4 +1,5 @@
 # FLOPs by matmul per sequence: 8 * d_model * d_model * sequence_length + 4 * sequence_length^2 * d_model + 6 * d_model * d_ff * sequence_length
+# trainable parameters: 4 * d_model * d_model + 2 * d_model + 3 * d_model * d_ff
 
 import torch
 from torch import nn, Tensor
@@ -18,6 +19,7 @@ class Transformer_Block(nn.Module):
         dtype: torch.dtype | None = None,
     ):
         super().__init__()
+        # trainable parameters:  4 * d_model * d_model
         self.attn = Multihead_Self_Attention(
             d_model,
             num_heads,
@@ -26,8 +28,11 @@ class Transformer_Block(nn.Module):
             device=device,
             dtype=dtype,
         )
+        # trainable parameters: d_model
         self.ln1 = RMSNorm(d_model, device=device, dtype=dtype)
+        # trainable parameters: 3 * d_model * d_ff
         self.ffn = SwiGLU(d_model, d_ff, device=device, dtype=dtype)
+        # trainable parameters: d_model
         self.ln2 = RMSNorm(d_model, device=device, dtype=dtype)
 
     def forward(self, x: Float[Tensor, "... d_model"]) -> Float[Tensor, "... d_model"]:

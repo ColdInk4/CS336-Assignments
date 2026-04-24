@@ -1,4 +1,5 @@
 # FLOPs by matmul: 0
+# trainable parameters: 0
 
 import torch
 from torch import nn, Tensor

@@ -1,4 +1,5 @@
 # FLOPs by matmul per sequence across all heads: 8 * d_model * d_model * sequence_length + 4 * sequence_length^2 * d_model
+# trainable parameters: 4 * d_model * d_model
 
 import torch
 from torch import nn, Tensor
@@ -22,6 +23,7 @@ class Multihead_Self_Attention(nn.Module):
 
         self.num_heads = num_heads
         # 我们本次的实现里，hd_k = hd_v = d_model/num_heads
+        # trainable parameters: 4 * d_model * d_model
         self.q_proj = Linear(d_model, d_model, device=device, dtype=dtype)
         self.k_proj = Linear(d_model, d_model, device=device, dtype=dtype)
         self.v_proj = Linear(d_model, d_model, device=device, dtype=dtype)

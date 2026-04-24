@@ -1,4 +1,5 @@
 # FLOPs by matmul: 2 * d_in * d_out
+# trainable parameters: d_out * d_in
 
 import torch
 from torch import nn, Tensor
@@ -18,6 +19,7 @@ class Linear(nn.Module):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
+        # trainable parameters: d_out * d_in
         self.weight: Float[Tensor, " d_out d_in"] = nn.Parameter(
             torch.empty(out_features, in_features, device=device, dtype=dtype)
         )

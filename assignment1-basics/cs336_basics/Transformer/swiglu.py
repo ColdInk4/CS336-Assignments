@@ -1,4 +1,5 @@
 # FLOPs by matmul per sequence: 6 * d_model * d_ff * sequence_length
+# trainable parameters: 3 * d_model * d_ff
 
 import torch
 from torch import nn, Tensor
@@ -19,13 +20,13 @@ class SwiGLU(nn.Module):
         dtype: torch.dtype | None = None,
     ):
         super().__init__()
+        # trainable parameters: 3 * d_model * d_ff
         self.w1 = Linear(d_model, d_ff, device=device, dtype=dtype)
         self.w2 = Linear(d_ff, d_model, device=device, dtype=dtype)
         self.w3 = Linear(d_model, d_ff, device=device, dtype=dtype)
 
     def forward(self, x: Float[Tensor, "... d_model"]) -> Float[Tensor, "... d_model"]:
         # FLOPs by matmul per sequence: 6 * d_model * d_ff * sequence_length
-
         w1_x = self.w1(x)
         w3_x = self.w3(x)
         return self.w2(SiLU(w1_x) * w3_x)
