@@ -1,3 +1,10 @@
+# FLOPs by matmul per sequence:
+# num_layers
+# *
+# (8 * d_model * d_model * sequence_length + 4 * sequence_length^2 * d_model + 6 * d_model * d_ff * sequence_length)
+# +
+# 2 * d_model * vocab_size * sequence_length
+
 import torch
 from torch import nn, Tensor
 from jaxtyping import Float, Int
@@ -60,6 +67,8 @@ class Transformer_LM(nn.Module):
         transformer_values: Float[Tensor, "batch_size sequence_length d_model"] = (
             embedding_values
         )
+
+        # FLOPs by matmul per sequence: num_layers * (8 * d_model * d_model * sequence_length + 4 * sequence_length^2 * d_model + 6 * d_model * d_ff * sequence_length)
         for transformer_block in self.layers:
             transformer_values = transformer_block(transformer_values)
 
@@ -67,6 +76,7 @@ class Transformer_LM(nn.Module):
             self.ln_final(transformer_values)
         )
 
+        # FLOPs by matmul per sequence: 2 * d_model * vocab_size * sequence_length
         lm_head_values: Float[Tensor, "batch_size sequence_length vocab_size"] = (
             self.lm_head(norm_values)
         )

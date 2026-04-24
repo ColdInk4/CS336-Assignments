@@ -1,4 +1,5 @@
-import torch
+# FLOPs by matmul per attention call: 2 * queries * d_k * keys + 2 * queries * d_v * keys
+
 from torch import Tensor
 from jaxtyping import Float, Bool
 from cs336_basics.Transformer import softmax
@@ -13,6 +14,7 @@ def scaled_dot_product_attention(
     mask: Bool[Tensor, "... queries keys"] | None = None,
 ) -> Float[Tensor, "... queries d_v"]:
     d_k = Q.shape[-1]
+    # FLOPs by matmul: 2 * queries * d_k * keys
     pre_softmax_values: Float[Tensor, "... queries keys"] = einsum(
         Q,
         K,
@@ -21,6 +23,7 @@ def scaled_dot_product_attention(
     if mask is not None:
         pre_softmax_values = pre_softmax_values.masked_fill(~mask, -float("inf"))
     softmax_values = softmax(pre_softmax_values, dim=-1)
+    # FLOPs by matmul: 2 * queries * d_v * keys
     result = einsum(
         softmax_values,
         V,

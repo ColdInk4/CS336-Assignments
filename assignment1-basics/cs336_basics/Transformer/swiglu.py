@@ -1,3 +1,5 @@
+# FLOPs by matmul per sequence: 6 * d_model * d_ff * sequence_length
+
 import torch
 from torch import nn, Tensor
 from jaxtyping import Float
@@ -22,6 +24,8 @@ class SwiGLU(nn.Module):
         self.w3 = Linear(d_model, d_ff, device=device, dtype=dtype)
 
     def forward(self, x: Float[Tensor, "... d_model"]) -> Float[Tensor, "... d_model"]:
+        # FLOPs by matmul per sequence: 6 * d_model * d_ff * sequence_length
+
         w1_x = self.w1(x)
         w3_x = self.w3(x)
         return self.w2(SiLU(w1_x) * w3_x)

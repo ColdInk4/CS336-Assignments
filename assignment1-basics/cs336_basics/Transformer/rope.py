@@ -1,3 +1,5 @@
+# FLOPs by matmul: 0
+
 import torch
 from torch import nn, Tensor
 from jaxtyping import Float, Int
@@ -46,7 +48,7 @@ class RoPE(nn.Module):
         sin_values: Float[Tensor, "... seq_len num_pairs"] = self.sin_precomputed[
             token_positions
         ]
-
+        # 3*d_k FLOPS / token
         rotated_first, rotated_second = (
             x_pairs[..., 0] * cos_values - x_pairs[..., 1] * sin_values,
             x_pairs[..., 0] * sin_values + x_pairs[..., 1] * cos_values,

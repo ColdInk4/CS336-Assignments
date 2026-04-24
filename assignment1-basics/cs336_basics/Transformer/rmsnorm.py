@@ -1,3 +1,5 @@
+# FLOPs by matmul: 0
+
 import torch
 from torch import nn, Tensor
 from jaxtyping import Float

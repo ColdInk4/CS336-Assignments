@@ -1,3 +1,5 @@
+# FLOPs by matmul per sequence: 8 * d_model * d_model * sequence_length + 4 * sequence_length^2 * d_model + 6 * d_model * d_ff * sequence_length
+
 import torch
 from torch import nn, Tensor
 from jaxtyping import Float
@@ -29,6 +31,8 @@ class Transformer_Block(nn.Module):
         self.ln2 = RMSNorm(d_model, device=device, dtype=dtype)
 
     def forward(self, x: Float[Tensor, "... d_model"]) -> Float[Tensor, "... d_model"]:
+        # FLOPs by matmul per sequence: 8 * d_model * d_model * sequence_length + 4 * sequence_length^2 * d_model
         output1 = x + self.attn(self.ln1(x))
+        # FLOPs by matmul per sequence: 6 * d_model * d_ff * sequence_length
         result = output1 + self.ffn(self.ln2(output1))
         return result
