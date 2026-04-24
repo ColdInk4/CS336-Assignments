@@ -12,13 +12,14 @@ class RoPE(nn.Module):
         d_k: int,
         max_seq_len: int,
         device: torch.device | None = None,
+        dtype: torch.dtype | None = None,
     ):
         super().__init__()
         cos_precomputed: Float[Tensor, "max_seq_len num_pairs"] = torch.empty(
-            max_seq_len, int(d_k / 2), device=device
+            max_seq_len, int(d_k / 2), device=device, dtype=dtype
         )
         sin_precomputed: Float[Tensor, "max_seq_len num_pairs"] = torch.empty(
-            max_seq_len, int(d_k / 2), device=device
+            max_seq_len, int(d_k / 2), device=device, dtype=dtype
         )
         for position in range(max_seq_len):
             for pair_idx in range(int(d_k / 2)):
@@ -26,8 +27,8 @@ class RoPE(nn.Module):
                 angle = position / theta ** ((2 * pair_number - 2) / d_k)
                 cos_precomputed[position, pair_idx] = cos(angle)
                 sin_precomputed[position, pair_idx] = sin(angle)
-        self.register_buffer("cos_precomputed", cos_precomputed)
-        self.register_buffer("sin_precomputed", sin_precomputed)
+        self.register_buffer("cos_precomputed", cos_precomputed, persistent=False)
+        self.register_buffer("sin_precomputed", sin_precomputed, persistent=False)
 
     def forward(
         self,

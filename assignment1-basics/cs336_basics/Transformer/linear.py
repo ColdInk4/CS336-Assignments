@@ -16,8 +16,6 @@ class Linear(nn.Module):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.device = device
-        self.dtype = dtype
         self.weight: Float[Tensor, " d_out d_in"] = nn.Parameter(
             torch.empty(out_features, in_features, device=device, dtype=dtype)
         )

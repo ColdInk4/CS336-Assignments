@@ -20,13 +20,15 @@ class Multihead_Self_Attention(nn.Module):
 
         self.num_heads = num_heads
         # 我们本次的实现里，hd_k = hd_v = d_model/num_heads
-        self.W_Q = Linear(d_model, d_model, device=device, dtype=dtype)
-        self.W_K = Linear(d_model, d_model, device=device, dtype=dtype)
-        self.W_V = Linear(d_model, d_model, device=device, dtype=dtype)
-        self.W_O = Linear(d_model, d_model, device=device, dtype=dtype)
+        self.q_proj = Linear(d_model, d_model, device=device, dtype=dtype)
+        self.k_proj = Linear(d_model, d_model, device=device, dtype=dtype)
+        self.v_proj = Linear(d_model, d_model, device=device, dtype=dtype)
+        self.output_proj = Linear(d_model, d_model, device=device, dtype=dtype)
         self.rope = None
         if max_seq_len is not None and theta is not None:
-            self.rope = RoPE(theta, int(d_model / num_heads), max_seq_len)
+            self.rope = RoPE(
+                theta, int(d_model / num_heads), max_seq_len, device=device, dtype=dtype
+            )
 
     # self_attention 里 queries = keys = sequence_length
     def multihead(
@@ -53,12 +55,12 @@ class Multihead_Self_Attention(nn.Module):
         sequence_length = Q.shape[-2]
         mask = torch.tril(
             torch.ones(
-                sequence_length, sequence_length, dtype=torch.bool, device=Q.device
+                sequence_length, sequence_length, device=Q.device, dtype=torch.bool
             )
         )
         if self.rope is not None:
             token_positions = torch.arange(
-                sequence_length, dtype=torch.long, device=Q.device
+                sequence_length, device=Q.device, dtype=torch.long
             )
             Q_slices_roped = self.rope(Q_slices, token_positions)
             K_slices_roped = self.rope(K_slices, token_positions)
@@ -76,9 +78,11 @@ class Multihead_Self_Attention(nn.Module):
     def forward(
         self, in_features: Float[Tensor, " ... sequence_length d_model"]
     ) -> Float[Tensor, " ... sequence_length d_model"]:
-        return self.W_O(
+        return self.output_proj(
             self.multihead(
-                self.W_Q(in_features), self.W_K(in_features), self.W_V(in_features)
+                self.q_proj(in_features),
+                self.k_proj(in_features),
+                self.v_proj(in_features),
             )
         )
 

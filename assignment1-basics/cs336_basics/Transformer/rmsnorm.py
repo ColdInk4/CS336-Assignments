@@ -14,8 +14,6 @@ class RMSNorm(nn.Module):
         super().__init__()
         self.d_model = d_model
         self.eps = eps
-        self.device = device
-        self.dtype = dtype
         self.weight: Float[Tensor, "d_model"] = nn.Parameter(
             torch.ones(self.d_model, device=device, dtype=dtype)
         )

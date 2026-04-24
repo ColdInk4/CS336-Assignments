@@ -8,8 +8,6 @@ class Embedding(nn.Module):
         super().__init__()
         self.num_embeddings = num_embeddings
         self.embedding_dim = embedding_dim
-        self.device = device
-        self.dtype = dtype
         self.weight: Float[Tensor, " vocab_size d_model"] = nn.Parameter(
             torch.empty(num_embeddings, embedding_dim, device=device, dtype=dtype)
         )

@@ -6,6 +6,7 @@ from .rope import RoPE
 from .softmax import softmax
 from .scaled_dot_product_attention import scaled_dot_product_attention
 from .multihead_self_attention import Multihead_Self_Attention
+from .transformer_block import Transformer_Block
 
 __all__ = [
     "Linear",
@@ -17,4 +18,5 @@ __all__ = [
     "softmax",
     "scaled_dot_product_attention",
     "Multihead_Self_Attention",
+    "Transformer_Block",
 ]
