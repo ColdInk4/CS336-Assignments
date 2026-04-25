@@ -23,6 +23,7 @@ from cs336_basics.Transformer import (
     Multihead_Self_Attention,
     Transformer_Block,
     Transformer_LM,
+    cross_entropy,
 )
 
 
@@ -507,7 +508,7 @@ def run_cross_entropy(
     Returns:
         Float[Tensor, ""]: The average cross-entropy loss across examples.
     """
-    raise NotImplementedError
+    return cross_entropy(inputs, targets)
 
 
 def run_gradient_clipping(
