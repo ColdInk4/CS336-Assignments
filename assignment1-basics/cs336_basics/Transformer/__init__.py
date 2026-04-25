@@ -9,6 +9,7 @@ from .multihead_self_attention import Multihead_Self_Attention
 from .transformer_block import Transformer_Block
 from .transformer_lm import Transformer_LM
 from .cross_entropy import cross_entropy
+from .adamw import AdamW
 
 __all__ = [
     "Linear",
@@ -23,4 +24,5 @@ __all__ = [
     "Transformer_Block",
     "Transformer_LM",
     "cross_entropy",
+    "AdamW",
 ]
