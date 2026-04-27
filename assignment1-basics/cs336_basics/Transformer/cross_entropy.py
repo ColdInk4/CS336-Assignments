@@ -9,8 +9,10 @@ def cross_entropy(
     batch_size = inputs.shape[0]
     max_logits: Float[Tensor, "batch_size 1"]
     max_logits, _ = inputs.max(dim=-1, keepdim=True)
+    exp_shifted: Float[Tensor, "batch_size vocab_size"]
+    exp_shifted = (inputs - max_logits).exp()
     exp_shifted_sum: Float[Tensor, "batch_size 1"]
-    exp_shifted_sum = (inputs - max_logits).exp().sum(dim=-1, keepdim=True)
+    exp_shifted_sum = exp_shifted.sum(dim=-1, keepdim=True)
 
     # stable CE = log(sum_j exp(logit_j - max_logit)) - (correct_logit - max_logit)
     row_idx = torch.arange(batch_size, device=inputs.device)

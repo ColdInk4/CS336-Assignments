@@ -1,3 +1,4 @@
+# FLOPs per step: 14 * num_parameters
 from collections.abc import Callable
 from typing import Optional
 import torch
@@ -39,12 +40,16 @@ class AdamW(torch.optim.Optimizer):
                     # Compute adjusted 𝛼 for iteration 𝑡
                     adjusted_lr = lr * math.sqrt(1 - beta2**t) / (1 - beta1**t)
                     # Apply weight decay
-                    p -= lr * weight_decay * p  # Apply weight decay
+                    # FLOPs: 2 * num_parameters
+                    p -= (lr * weight_decay) * p  # Apply weight decay
                     # Update the first moment estimate
+                    # FLOPs: 3 * num_parameters
                     m = beta1 * m + (1 - beta1) * grad
                     # Update the second moment estimate
+                    # FLOPs: 4 * num_parameters
                     v = beta2 * v + (1 - beta2) * (grad**2)
                     # Apply moment-adjusted weight updates
+                    # FLOPs: 5 * num_parameters
                     p -= adjusted_lr * m / (v.sqrt() + eps)
 
                     state["t"] = t
