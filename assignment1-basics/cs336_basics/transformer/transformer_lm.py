@@ -10,7 +10,7 @@
 import torch
 from torch import nn, Tensor
 from jaxtyping import Float, Int
-from cs336_basics.Transformer import (
+from cs336_basics.transformer import (
     Embedding,
     Transformer_Block,
     RMSNorm,

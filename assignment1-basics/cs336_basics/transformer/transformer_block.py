@@ -4,7 +4,7 @@
 import torch
 from torch import nn, Tensor
 from jaxtyping import Float
-from cs336_basics.Transformer import Multihead_Self_Attention, RMSNorm, SwiGLU
+from cs336_basics.transformer import Multihead_Self_Attention, RMSNorm, SwiGLU
 
 
 class Transformer_Block(nn.Module):

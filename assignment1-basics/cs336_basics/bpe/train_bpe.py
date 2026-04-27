@@ -1,4 +1,4 @@
-from cs336_basics.BPE.pretokenization import pretokenize
+from cs336_basics.bpe.pretokenization import pretokenize
 import os
 from collections import defaultdict
 import heapq

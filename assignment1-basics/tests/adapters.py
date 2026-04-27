@@ -9,9 +9,8 @@ import torch
 from jaxtyping import Bool, Float, Int
 from torch import Tensor
 
-from cs336_basics.BPE.train_bpe import train_bpe_from_filepath
-from cs336_basics.BPE.tokenizer import Tokenizer
-from cs336_basics.Transformer import (
+from cs336_basics.bpe import train_bpe_from_filepath, Tokenizer
+from cs336_basics.transformer import (
     Linear,
     Embedding,
     RMSNorm,
@@ -23,11 +22,9 @@ from cs336_basics.Transformer import (
     Multihead_Self_Attention,
     Transformer_Block,
     Transformer_LM,
-    cross_entropy,
-    AdamW,
-    lr_cosine_schedule,
-    gradient_clipping,
 )
+from cs336_basics.losses import cross_entropy
+from cs336_basics.optim import AdamW, lr_cosine_schedule, gradient_clipping
 
 
 def run_linear(

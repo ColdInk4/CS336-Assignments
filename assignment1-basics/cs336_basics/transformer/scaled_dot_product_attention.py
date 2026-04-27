@@ -2,7 +2,7 @@
 
 from torch import Tensor
 from jaxtyping import Float, Bool
-from cs336_basics.Transformer import softmax
+from cs336_basics.transformer import softmax
 from einops import einsum
 from math import sqrt
 

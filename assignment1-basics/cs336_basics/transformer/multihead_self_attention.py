@@ -5,7 +5,7 @@ import torch
 from torch import nn, Tensor
 from einops import rearrange
 from jaxtyping import Float
-from cs336_basics.Transformer import Linear, scaled_dot_product_attention, RoPE
+from cs336_basics.transformer import Linear, scaled_dot_product_attention, RoPE
 
 
 class Multihead_Self_Attention(nn.Module):
