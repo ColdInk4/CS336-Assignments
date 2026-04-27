@@ -26,6 +26,7 @@ from cs336_basics.Transformer import (
     cross_entropy,
     AdamW,
     lr_cosine_schedule,
+    gradient_clipping,
 )
 
 
@@ -524,7 +525,7 @@ def run_gradient_clipping(
 
     The gradients of the parameters (parameter.grad) should be modified in-place.
     """
-    raise NotImplementedError
+    gradient_clipping(parameters, max_l2_norm)
 
 
 def get_adamw_cls() -> Any:

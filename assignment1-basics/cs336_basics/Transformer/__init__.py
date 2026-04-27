@@ -11,6 +11,7 @@ from .transformer_lm import Transformer_LM
 from .cross_entropy import cross_entropy
 from .adamw import AdamW
 from .schduler import lr_cosine_schedule
+from .gradient_clipping import gradient_clipping
 
 __all__ = [
     "Linear",
@@ -27,4 +28,5 @@ __all__ = [
     "cross_entropy",
     "AdamW",
     "lr_cosine_schedule",
+    "gradient_clipping",
 ]
