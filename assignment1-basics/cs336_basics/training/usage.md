@@ -1,0 +1,23 @@
+uv run python -m cs336_basics.training.training \
+  --train_path results/tokenids/ts-train-tokenids.npy \
+  --valid_path results/tokenids/ts-valid-tokenids.npy \
+  --vocab_size 10000 \
+  --context_length 256 \
+  --d_model 512 \
+  --num_layers 4 \
+  --num_heads 16 \
+  --theta 10000 \
+  --batch_size 32 \
+  --num_train_steps 5000 \
+  --max_lr 3e-4 \
+  --min_lr 3e-5 \
+  --warmup_steps 500 \
+  --cosine_cycle_steps 5000 \
+  --betas 0.9 0.95 \
+  --weight_decay 0.01 \
+  --adamw_eps 1e-8 \
+  --max_grad_norm 1.0 \
+  --eval_interval 100 \
+  --checkpoint_interval 1000 \
+  --checkpoint_dir checkpoints/tinystories \
+  --device cuda
