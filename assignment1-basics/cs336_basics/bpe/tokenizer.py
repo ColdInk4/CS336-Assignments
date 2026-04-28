@@ -15,6 +15,7 @@ class Tokenizer:
         self.special_tokens: list[str] | None = (
             sorted(special_tokens, key=lambda x: -len(x)) if special_tokens else None
         )
+        self.special_token_ids: set[int] = set()
         self.special_tokens_len_max = (
             len(max(self.special_tokens, key=len)) if self.special_tokens else 0
         )
@@ -34,6 +35,7 @@ class Tokenizer:
                     idx = len(self.vocab)
                     self.vocab[idx] = special_token_bytes
                     self.bytes_to_id[special_token_bytes] = idx
+                self.special_token_ids.add(self.bytes_to_id[special_token_bytes])
 
         self.special_token_pattern: str | None = (
             "|".join(re.escape(special_token) for special_token in self.special_tokens)
