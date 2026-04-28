@@ -8,17 +8,20 @@ uv run python -m cs336_basics.training.training \
   --num_heads 16 \
   --theta 10000 \
   --batch_size 32 \
-  --total_train_steps 5000 \
+  --total_train_steps 50 \
   --max_lr 3e-4 \
   --min_lr 3e-5 \
-  --warmup_steps 500 \
-  --cosine_cycle_steps 5000 \
+  --warmup_steps 5 \
+  --cosine_cycle_steps 50 \
   --betas 0.9 0.95 \
   --weight_decay 0.01 \
   --adamw_eps 1e-8 \
   --max_grad_norm 1.0 \
   --log_interval 10 \
-  --eval_interval 100 \
-  --checkpoint_interval 1000 \
+  --eval_interval 20 \
+  --checkpoint_interval 10 \
   --checkpoint_dir checkpoints/tinystories \
+  --use_wandb\
+  --wandb_project test\
+  --wandb_run_name test\
   --device cuda
