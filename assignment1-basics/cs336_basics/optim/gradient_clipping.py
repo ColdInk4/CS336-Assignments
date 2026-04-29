@@ -1,6 +1,5 @@
 from collections.abc import Iterable
 from torch import nn
-import torch
 
 
 def gradient_clipping(parameters: Iterable[nn.Parameter], max_l2_norm: float) -> None:

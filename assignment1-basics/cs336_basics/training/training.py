@@ -3,7 +3,7 @@ from cs336_basics.data_loader import get_batch
 import numpy as np
 from cs336_basics.transformer import Transformer_LM
 from cs336_basics.losses import cross_entropy
-from cs336_basics.training import load_checkpoint, save_checkpoint
+from .checkpointing import load_checkpoint, save_checkpoint
 from cs336_basics.optim import AdamW, gradient_clipping, lr_cosine_schedule
 from einops import rearrange
 import torch

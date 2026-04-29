@@ -10,12 +10,10 @@
 import torch
 from torch import nn, Tensor
 from jaxtyping import Float, Int
-from cs336_basics.transformer import (
-    Embedding,
-    Transformer_Block,
-    RMSNorm,
-    Linear,
-)
+from .embedding import Embedding
+from .transformer_block import Transformer_Block
+from .rmsnorm import RMSNorm
+from .linear import Linear
 
 
 class Transformer_LM(nn.Module):
