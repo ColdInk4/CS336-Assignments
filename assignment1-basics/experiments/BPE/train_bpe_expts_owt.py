@@ -1,4 +1,4 @@
-from cs336_basics.BPE.train_bpe import train_bpe_from_filepath
+from cs336_basics.bpe import train_bpe_from_filepath
 
 vocab, merges = train_bpe_from_filepath(
     "data/owt_train.txt",

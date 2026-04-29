@@ -1,4 +1,4 @@
-from cs336_basics.BPE.tokenizer import Tokenizer
+from cs336_basics.bpe import Tokenizer
 import random
 import time
 
