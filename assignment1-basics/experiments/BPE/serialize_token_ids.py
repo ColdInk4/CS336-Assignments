@@ -1,16 +1,20 @@
 import numpy as np
-from cs336_basics.BPE.tokenizer import Tokenizer
+from cs336_basics.bpe import Tokenizer
 import time
 
 TinyStories_Vocab_Filepath = "results/TinyStoriesV2-GPT4-vocab.txt"
 TinyStories_Merges_Filepath = "results/TinyStoriesV2-GPT4-merges.txt"
 TinyStories_Tokenizer = Tokenizer.from_files(
-    TinyStories_Vocab_Filepath, TinyStories_Merges_Filepath
+    TinyStories_Vocab_Filepath,
+    TinyStories_Merges_Filepath,
+    special_tokens=["<|endoftext|>"],
 )
 
 OWT_Vocab_Filepath = "results/owt-vocab.txt"
 OWT_Merges_Filepath = "results/owt-merges.txt"
-OWT_Tokenizer = Tokenizer.from_files(OWT_Vocab_Filepath, OWT_Merges_Filepath)
+OWT_Tokenizer = Tokenizer.from_files(
+    OWT_Vocab_Filepath, OWT_Merges_Filepath, special_tokens=["<|endoftext|>"]
+)
 
 TinyStories_Valid_Filepath = "data/TinyStoriesV2-GPT4-valid.txt"
 TinyStories_Train_Filepath = "data/TinyStoriesV2-GPT4-train.txt"
