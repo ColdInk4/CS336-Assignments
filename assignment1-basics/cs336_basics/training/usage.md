@@ -1,4 +1,4 @@
-uv run python -m cs336_basics.training.training \
+CUDA_VISIBLE_DEVICES=1 uv run python -m cs336_basics.training.training \
   --train_path results/tokenids/ts-train-tokenids.npy \
   --valid_path results/tokenids/ts-valid-tokenids.npy \
   --d_model 512 \
@@ -8,20 +8,20 @@ uv run python -m cs336_basics.training.training \
   --num_heads 16 \
   --theta 10000 \
   --batch_size 32 \
-  --total_train_steps 50 \
+  --total_train_steps 40000 \
   --max_lr 3e-4 \
   --min_lr 3e-5 \
-  --warmup_steps 5 \
-  --cosine_cycle_steps 50 \
+  --warmup_steps 4000 \
+  --cosine_cycle_steps 40000 \
   --betas 0.9 0.95 \
   --weight_decay 0.01 \
   --adamw_eps 1e-8 \
   --max_grad_norm 1.0 \
-  --log_interval 10 \
-  --eval_interval 20 \
-  --checkpoint_interval 10 \
+  --log_interval 100 \
+  --eval_interval 1000 \
+  --checkpoint_interval 5000 \
   --checkpoint_dir checkpoints/tinystories \
-  --use_wandb\
-  --wandb_project test\
-  --wandb_run_name test\
+  --use_wandb \
+  --wandb_project test \
+  --wandb_run_name test \
   --device cuda
