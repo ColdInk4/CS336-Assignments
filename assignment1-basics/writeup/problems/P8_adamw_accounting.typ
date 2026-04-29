@@ -1,6 +1,8 @@
-## Problem (adamw_accounting): Resource accounting for training with AdamW (2 points)
+#import "../template.typ": problem, deliverable, note, section-label, subhead, prompt-box, answer-box, plot
 
-### Prompt
+#problem("adamw_accounting", "Resource accounting for training with AdamW", "2 points")[
+#prompt-box[
+#section-label[Prompt]
 
 Let us compute how much memory and compute running AdamW requires. Assume we are using `float32` for every tensor.
 
@@ -15,34 +17,24 @@ For simplicity, when calculating memory usage of activations, consider only the 
 - Output embedding
 - Cross-entropy on logits
 
-> Deliverable: An algebraic expression for each of parameters, activations, gradients, and optimizer state, as well as the total.
+#deliverable[An algebraic expression for each of parameters, activations, gradients, and optimizer state, as well as the total.]
 
 (b) Instantiate your answer for a GPT-2 XL-shaped model to get an expression that only depends on `batch_size`. What is the maximum batch size you can use and still fit within `80 GB` memory?
-For simplicity, when calculating memory usage of activations, consider only the following 
-components:
-• Transformer block
-‣RMSNorm(s)
-‣Multi-head self-attention sublayer: 𝑄𝐾𝑉  projections, 𝑄𝐾⊤ matrix multiply, softmax, 
-weighted sum of values, output projection.
-‣Position-wise feed-forward (SwiGLU): 𝑊1, 𝑊2, SiLU on the gate branch, element-wise 
-product, 𝑊3
-32
-• final RMSNorm
-• output embedding
-• cross-entropy on logits
-Deliverable: An algebraic expression for each of parameters, activations, gradients, and 
-optimizer state, as well as the total
-> Deliverable: An expression that looks like `a ⋅ batch_size + b` for numerical values `a`, `b`, and a number representing the maximum batch size.
+
+#deliverable[An expression that looks like `a ⋅ batch_size + b` for numerical values `a`, `b`, and a number representing the maximum batch size.]
 
 (c) How many FLOPs does running one step of AdamW take?
 
-> Deliverable: An algebraic expression, with a brief justification.
+#deliverable[An algebraic expression, with a brief justification.]
 
-(d) Model FLOPs utilization (MFU) is defined as the ratio of observed throughput, tokens per second, relative to the hardware’s theoretical peak FLOP throughput [A. Chowdhery et al., 2022]. An NVIDIA H100 GPU has a theoretical peak of `495 teraFLOP/s` for “float32”, actually TensorFloat-32, which in reality is “bfloat19”, operations. Assuming you are able to get `50% MFU`, how long would it take to train a GPT-2 XL for `400K` steps and a batch size of `1024` on a single H100? Following J. Kaplan et al. [25] and J. Hoffmann et al. [26], assume that the backward pass has twice the FLOPs of the forward pass.
+(d) Model FLOPs utilization (MFU) is defined as the ratio of observed throughput, tokens per second, relative to the hardware’s theoretical peak FLOP throughput \[A. Chowdhery et al., 2022\]. An NVIDIA H100 GPU has a theoretical peak of `495 teraFLOP/s` for “float32”, actually TensorFloat-32, which in reality is “bfloat19”, operations. Assuming you are able to get `50% MFU`, how long would it take to train a GPT-2 XL for `400K` steps and a batch size of `1024` on a single H100? Following J. Kaplan et al. \[25\] and J. Hoffmann et al. \[26\], assume that the backward pass has twice the FLOPs of the forward pass.
 
-> Deliverable: The number of hours training would take, with a brief justification.
+#deliverable[The number of hours training would take, with a brief justification.]
 
-### Answer
+]
+
+#answer-box[
+#section-label[Answer]
 
 a. 
 - input embedding
@@ -54,7 +46,7 @@ a.
     - optimizer state
         - `2 * (vocab_size * d_model)`
 - Transformer block
-    - 2 * RMSNorm 
+    - 2 \* RMSNorm 
         - parameters
             - `2 * (d_model)`
         - activations
@@ -76,13 +68,13 @@ a.
                 - `3 * (d_model * d_model)`
             - optimizer state
                 - `6 * (d_model * d_model)`
-        - `QK^T` matrix multiply (Q: [batch_size num_heads context_length hd_k], K: [batch_size num_heads context_length hd_k])
+        - `QK^T` matrix multiply (Q: \[batch\_size num\_heads context\_length hd\_k\], K: \[batch\_size num\_heads context\_length hd\_k\])
             - activations
                 - `batch_size * num_heads * context_length * context_length`
         - softmax
             - activations
                 - `batch_size * num_heads * context_length * context_length`
-        - weighted sum of values([batch_size num_heads context_length context_length], [batch_size num_heads context_length hd_v])
+        - weighted sum of values(\[batch\_size num\_heads context\_length context\_length\], \[batch\_size num\_heads context\_length hd\_v\])
             - activations
                 - `batch_size * context_length * d_model`
         - output projection
@@ -153,20 +145,37 @@ a.
     - activations
         - max-logits
             - `batch_size * context_length`
-        - exp_shifted
+        - exp\_shifted
             - `batch_size * context_length * vocab_size`
-        - exp_shifted_sum
+        - exp\_shifted\_sum
             - `batch_size * context_length`
-        - correct_logits
+        - correct\_logits
             - `batch_size * context_length`
 
-parameters memory: `4*D*(2*L*(6*D + 1) + 2*V + 1)`
-activations memory: `4*B*T*(3*D + 2*L*(28*D + 3*H*T + 3) + 6*V + 12)/3`
-gradients memory: `4*D*(2*L*(6*D + 1) + 2*V + 1)`
-optimizer_state memory: `8*D*(2*L*(6*D + 1) + 2*V + 1)`
-total memory: `4*B*T*(3*D + 2*L*(28*D + 3*H*T + 3) + 6*V + 12)/3 + 16*D*(2*L*(6*D + 1) + 2*V + 1)`
+#raw("parameters memory:
+  4*D*(2*L*(6*D + 1) + 2*V + 1)
 
-b.  GPT-2 XL-shaped model memory: 16357023744*B + 26168601600 bytes
-    maximum batch size within 80GB memory = 3
-c. AdamW optimizer update FLOPs: 14 * num_parameters
+activations memory:
+  4*B*T*(3*D + 2*L*(28*D + 3*H*T + 3) + 6*V + 12)/3
+
+gradients memory:
+  4*D*(2*L*(6*D + 1) + 2*V + 1)
+
+optimizer_state memory:
+  8*D*(2*L*(6*D + 1) + 2*V + 1)
+
+total memory:
+  4*B*T*(3*D + 2*L*(28*D + 3*H*T + 3) + 6*V + 12)/3
+  + 16*D*(2*L*(6*D + 1) + 2*V + 1)", block: true)
+
+b.
+
+GPT-2 XL-shaped model memory: `16357023744*B + 26168601600 bytes`
+
+Maximum batch size within 80GB memory: `3`
+
+c. AdamW optimizer update FLOPs: 14 \* num\_parameters
+
 d. about 4850 hours
+]
+]
