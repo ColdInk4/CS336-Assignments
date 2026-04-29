@@ -1,4 +1,4 @@
-TOTAL_TOKENS=40000000
+TOTAL_TOKENS=40960000
 CONTEXT_LENGTH=256
 BATCH_SIZE=128
 STEPS=$((TOTAL_TOKENS / (BATCH_SIZE * CONTEXT_LENGTH)))
@@ -11,8 +11,8 @@ if [ "$EVAL_INTERVAL" -lt 1 ]; then EVAL_INTERVAL=1; fi
 if [ "$LOG_INTERVAL" -lt 1 ]; then LOG_INTERVAL=1; fi
 if [ "$CHECKPOINT_INTERVAL" -lt 1 ]; then CHECKPOINT_INTERVAL=1; fi
 
-GPUS=(0 1 2 3 4)
-LRS=(2e-3 5e-3 7e-3 1e-2 3e-2)
+GPUS=(1 2 3 4 5)
+LRS=(1e-4 3e-4 7e-4 1e-3 1.5e-3)
 
 for i in {1..5}; do
   lr="${LRS[$i]}"
@@ -44,10 +44,10 @@ PY
     --eval_interval "$EVAL_INTERVAL" \
     --num_eval_batches 10 \
     --checkpoint_interval "$CHECKPOINT_INTERVAL" \
-    --checkpoint_dir "checkpoints/tinystories-bs128-lr-$lr-40M" \
+    --checkpoint_dir "checkpoints/tinystories-bs128-lr-$lr-40960000" \
     --use_wandb \
     --wandb_project cs336-assignment1 \
-    --wandb_run_name "ts-bs128-lr-$lr-40M" \
+    --wandb_run_name "ts-bs128-lr-$lr-40960000" \
     --device cuda &
 
   echo "Started lr=$lr on GPU=$gpu"
