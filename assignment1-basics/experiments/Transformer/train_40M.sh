@@ -40,8 +40,8 @@ PY
   --eval_interval "$EVAL_INTERVAL" \
   --num_eval_batches 10 \
   --checkpoint_interval "$CHECKPOINT_INTERVAL" \
-  --checkpoint_dir "checkpoints/tinystories-bs128-lr-$LR-327680000" \
+  --checkpoint_dir "checkpoints/tinystories-bs128-lr-$LR-40960000" \
   --use_wandb \
   --wandb_project cs336-assignment1 \
-  --wandb_run_name "ts-bs128-lr-$LR-327680000" \
+  --wandb_run_name "ts-bs128-lr-$LR-40960000" \
   --device cuda
